@@ -5,8 +5,28 @@ export class StringMap<K,V> {
 	protected _values?: V[]
 	protected _entries?: [K,V][]
 
+	static ofObject<V>( ...objects: { [key: string]: V }[] ): StringMap<string,V> {
+		const result = new StringMap<string,V>()
+		for ( const o of objects ) {
+			for ( const k in o ) {
+				if ( o.hasOwnProperty( k )) {
+					result.set( k, o[k] )
+				}
+			}
+		}
+		return result
+	}
+
+	toObject(): { [key: string]: V } {
+		const result: { [key: string]: V } = {}
+		for ( const k in this._data ) {
+			result[k] = this._data[k][1]
+		}
+		return result
+	}
+
 	constructor( arraylike?: [K,V][] ) {  
-		if ( arraylike !== undefined ) {
+		if ( typeof arraylike !== 'undefined' ) {
 			const data = this._data
 			let size = 0
 			for ( const [key,value] of arraylike ) {
@@ -45,7 +65,7 @@ export class StringMap<K,V> {
 	}
 
 	clear(): void {
-		if ( this.size > 0 ) {
+		if ( this._size > 0 ) {
 			this._data = {}
 			this._size = 0
 			this.clearCache()
@@ -107,7 +127,7 @@ export class StringMap<K,V> {
 		return this._entries
 	}
 
-	forEach( callback: (v: V, k?: K, map?: StringMap<K,V>) => void, thisArg?: any ): void {
+	forEach<Z>( callback: (this: Z, v: V, k: K, map: StringMap<K,V>) => void, thisArg?: Z ): void {
 		const data = this._data
 		for ( const sk in data ) {
 			const [key,value] = data[sk]
@@ -119,19 +139,19 @@ export class StringMap<K,V> {
 		return this._size
 	}
 
-	reduce<T>( callback: (acc: T, v: V, k: K, map: StringMap<K,V>) => T, initialValue: T ): T {
+	reduce<U,Z>( callback: (this: Z, currentValue: U, v: V, k: K, map: StringMap<K,V>) => U, initialValue: U, thisArg?: Z ): U {
 		const data = this._data
-		let acc = initialValue
+		let currentValue = initialValue
 		for ( const sk in data ) {
 			const [key,value] = data[sk]
-			acc = callback.call( null, acc, value, key, this )
+			currentValue = callback.call( thisArg, currentValue, value, key, this )
 		}
-		return acc
+		return currentValue
 	}
 
-	map<T>( callback: (v: V, k?: K, map?: StringMap<K,V>) => T, thisArg?: any ): StringMap<K,T> {
+	map<U,Z>( callback: (this:Z, v: V, k: K, map: StringMap<K,V>) => U, thisArg?: Z ): StringMap<K,U> {
 		const data = this._data
-		const result = new StringMap<K,T>()
+		const result = new StringMap<K,U>()
 		const resultData = result._data
 		for ( const sk in data ) {
 			const [key,value] = data[sk]
@@ -141,7 +161,7 @@ export class StringMap<K,V> {
 		return result
 	}
 
-	filter( callback: (v: V, k?: K, map?: StringMap<K,V>) => boolean, thisArg?: any ): StringMap<K,V> {
+	filter<Z>( callback: (this: Z, v: V, k: K, map: StringMap<K,V>) => boolean, thisArg?: Z ): StringMap<K,V> {
 		const data = this._data
 		const result = new StringMap<K,V>()
 		let size = 0 
@@ -156,7 +176,7 @@ export class StringMap<K,V> {
 		return result
 	}
 
-	every( callback: (v: V, k?: K, map?: StringMap<K,V>) => boolean, thisArg?: any ): boolean {
+	every<Z>( callback: (this: Z, v: V, k: K, map: StringMap<K,V>) => boolean, thisArg?: Z ): boolean {
 		const data = this._data
 		for ( const sk in data ) {
 			const [key,value] = data[sk]
@@ -167,7 +187,7 @@ export class StringMap<K,V> {
 		return true
 	}
 	
-	some( callback: (v: V, k?: K, map?: StringMap<K,V>) => boolean, thisArg?: any ): boolean {
+	some<Z>( callback: (this: Z, v: V, k: K, map: StringMap<K,V>) => boolean, thisArg?: Z ): boolean {
 		const data = this._data
 		for ( const sk in data ) {
 			const [key,value] = data[sk]
@@ -178,7 +198,19 @@ export class StringMap<K,V> {
 		return false
 	}
 
-	findKey( v: V ): K|undefined {
+	count<Z>( callback: (this: Z, v: V, k: K, map: StringMap<K,V>) => boolean, thisArg?: Z ): number {
+		const data = this._data
+		let counter = 0
+		for ( const sk in data ) {
+			const [key,value] = data[sk]
+			if ( callback.call( thisArg, value, key, this )) {
+				counter++
+			}
+		}
+		return counter
+	}
+
+	findKey( v: V ): K | undefined {
 		const data = this._data
 		for ( const sk in data ) {
 			const [key,value] = data[sk]
